@@ -1,0 +1,38 @@
+services:
+  ssh-ui:
+    image: brisca.sh
+    hostname: brisca.sh
+    tty: true
+    stdin_open: true
+    volumes:
+      - /c/Users/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
+    environment:
+      BRISCA_SERVER: http://brisca-server:8000
+      BRISCA_DEBUG: true
+      BRISCA_HOST: 0.0.0.0
+      BRISCA_PORT: 22
+    depends_on:
+      http:
+        condition: service_healthy
+    ports:
+      - "22:22"
+    networks:
+      - back
+
+  http:
+    image: brisca
+    hostname: brisca-server
+    volumes:
+      - /c/Users/enddy/workspace/brisca/recordings/:/app/recordings/
+    environment:
+      HTTP_PORT: 8000
+    healthcheck:
+      test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/8000" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
+    networks:
+      - back
+
+networks:
+  back:

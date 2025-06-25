@@ -1,0 +1,81 @@
+services:
+  ssh:
+    image: brisca-twoserver
+    hostname: brisca.sh
+    tty: true
+    stdin_open: true
+    volumes:
+      - /c/Users/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
+    environment:
+      BRISCA_BROWSERSERVER: http://browser:9000
+      BRISCA_DEBUG: true
+      BRISCA_HOST: 0.0.0.0
+      BRISCA_PORT: 22
+    depends_on:
+      browser:
+        condition: service_healthy
+    ports:
+      - "22:22"
+    restart: always
+
+  browser-proxy:
+    image: "traefik"
+    hostname: brisca-server
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  browser:
+    image: server-browser
+    deploy:
+      mode: replicated
+      replicas: 1
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.browser.loadbalancer.server.port=9000"
+      - "traefik.http.services.myservice.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.myservice.loadbalancer.sticky.cookie.name=sticky"
+    volumes:
+      - /c/Users/enddy/workspace/brisca/recordings/:/app/recordings/
+    environment:
+      BROWSER_PORT: 9000
+      BROWSER_HOSTNAME: 0.0.0.0
+      BROWSER_GAME_SPAWNER: /app/spawner
+      BROWSER_GAME_HEALTHCHECK: /app/healthcheck
+      BROWSER_GAME_PORT_RANGE_START: 9004
+      BROWSER_GAME_PORT_RANGE_COUNT: 40
+      RECORDING_DIR: /app/recordings
+    healthcheck:
+      test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/9000" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
+
+  auth-db:
+    image: postgres
+    restart: always
+    user: postgres
+    # secrets:
+    #   - db-password
+    volumes:
+      - db-data:/c/Users/enddy/pgdb
+    environment:
+      - POSTGRES_DB=brisca-auth
+      - POSTGRES_PASSWORD=postgres
+      # - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
+    ports:
+      - 5432:5432
+
+volumes:
+  db-data:
