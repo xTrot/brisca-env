@@ -1,9 +1,11 @@
 services:
   ssh:
-    image: brisca-twoserver
+    image: localhost:5000/brisca-twoserver:latest
     hostname: brisca.sh
     tty: true
     stdin_open: true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     volumes:
       - /c/Users/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
     environment:
@@ -32,7 +34,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   browser:
-    image: server-browser
+    image: localhost:5000/server-browser:latest
     deploy:
       mode: replicated
       replicas: 1
@@ -41,6 +43,7 @@ services:
       - "traefik.http.services.browser.loadbalancer.server.port=9000"
       - "traefik.http.services.myservice.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.myservice.loadbalancer.sticky.cookie.name=sticky"
+      - "com.centurylinklabs.watchtower.enable=true"
     volumes:
       - /c/Users/enddy/workspace/brisca/recordings/:/app/recordings/
     environment:
@@ -64,7 +67,7 @@ services:
     # secrets:
     #   - db-password
     volumes:
-      - db-data:/c/Users/enddy/pgdb
+      - db-data:/c/Users/enddy/docker/pgdb
     environment:
       - POSTGRES_DB=brisca-auth
       - POSTGRES_PASSWORD=postgres
@@ -77,5 +80,24 @@ services:
     ports:
       - 5432:5432
 
+  watchtower:
+    image: containrrr/watchtower
+    command:
+      - "--label-enable"
+      - "--interval"
+      - "1"
+      - "--rolling-restart"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  registry:
+    image: registry:3
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry_data:/c/Users/enddy/docker/registry
+    restart: always
+
 volumes:
   db-data:
+  registry_data:
