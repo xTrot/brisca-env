@@ -1,11 +1,20 @@
 services:
   ssh:
     image: localhost:5000/brisca-twoserver:latest
-    hostname: brisca.sh
     tty: true
     stdin_open: true
     labels:
+
+      # Enable auto-update on new image being sent to the registry.
       - "com.centurylinklabs.watchtower.enable=true"
+
+      # Add loadbalancer for the ssh service
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.ssh-router.entrypoints=ssh"
+      - "traefik.tcp.routers.ssh-router.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.ssh-router.service=ssh-service"
+      - "traefik.tcp.services.ssh-service.loadbalancer.server.port=22"
+
     volumes:
       - /c/Users/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
     environment:
@@ -16,9 +25,10 @@ services:
     depends_on:
       browser:
         condition: service_healthy
-    ports:
-      - "22:22"
     restart: always
+    deploy:
+      mode: replicated
+      replicas: 2
 
   browser-proxy:
     image: "traefik"
@@ -28,8 +38,13 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+
+      # Expose port for the ssh-router
+      - "--entrypoints.ssh.address=:22"
+
     ports:
       - "8080:8080"
+      - "22:22"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
@@ -39,11 +54,9 @@ services:
       mode: replicated
       replicas: 1
     labels:
+      - "com.centurylinklabs.watchtower.enable=true"
       - "traefik.enable=true"
       - "traefik.http.services.browser.loadbalancer.server.port=9000"
-      - "traefik.http.services.myservice.loadbalancer.sticky.cookie=true"
-      - "traefik.http.services.myservice.loadbalancer.sticky.cookie.name=sticky"
-      - "com.centurylinklabs.watchtower.enable=true"
     volumes:
       - /c/Users/enddy/workspace/brisca/recordings/:/app/recordings/
     environment:
@@ -87,6 +100,8 @@ services:
       - "--interval"
       - "1"
       - "--rolling-restart"
+      - "--stop-timeout"
+      - "45m"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
