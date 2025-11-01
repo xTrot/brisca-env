@@ -1,0 +1,118 @@
+services:
+  ssh:
+    image: localhost:5000/brisca-twoserver:latest
+    tty: true
+    stdin_open: true
+    labels:
+
+      # Enable auto-update on new image being sent to the registry.
+      - "com.centurylinklabs.watchtower.enable=true"
+
+      # Add loadbalancer for the ssh service
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.ssh-router.entrypoints=ssh"
+      - "traefik.tcp.routers.ssh-router.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.ssh-router.service=ssh-service"
+      - "traefik.tcp.services.ssh-service.loadbalancer.server.port=22"
+
+    volumes:
+      - /c/Users/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
+    environment:
+      BRISCA_BROWSERSERVER: http://browser:9000
+      BRISCA_DEBUG: true
+      BRISCA_HOST: 0.0.0.0
+      BRISCA_PORT: 22
+    depends_on:
+      browser:
+        condition: service_healthy
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 2
+
+  browser-proxy:
+    image: "traefik"
+    hostname: brisca-server
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+
+      # Expose port for the ssh-router
+      - "--entrypoints.ssh.address=:22"
+
+    ports:
+      - "8080:8080"
+      - "22:22"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  browser:
+    image: localhost:5000/server-browser:latest
+    deploy:
+      mode: replicated
+      replicas: 1
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "traefik.enable=true"
+      - "traefik.http.services.browser.loadbalancer.server.port=9000"
+    volumes:
+      - /c/Users/enddy/workspace/brisca/recordings/:/app/recordings/
+    environment:
+      BROWSER_PORT: 9000
+      BROWSER_HOSTNAME: 0.0.0.0
+      BROWSER_GAME_SPAWNER: /app/spawner
+      BROWSER_GAME_HEALTHCHECK: /app/healthcheck
+      BROWSER_GAME_PORT_RANGE_START: 9004
+      BROWSER_GAME_PORT_RANGE_COUNT: 40
+      RECORDING_DIR: /app/recordings
+    healthcheck:
+      test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/9000" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
+
+  auth-db:
+    image: postgres
+    restart: always
+    user: postgres
+    # secrets:
+    #   - db-password
+    volumes:
+      - db-data:/c/Users/enddy/docker/pgdb
+    environment:
+      - POSTGRES_DB=brisca-auth
+      - POSTGRES_PASSWORD=postgres
+      # - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
+    ports:
+      - 5432:5432
+
+  watchtower:
+    image: containrrr/watchtower
+    command:
+      - "--label-enable"
+      - "--interval"
+      - "1"
+      - "--rolling-restart"
+      - "--stop-timeout"
+      - "45m"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  registry:
+    image: registry:3
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry_data:/c/Users/enddy/docker/registry
+    restart: always
+
+volumes:
+  db-data:
+  registry_data:
