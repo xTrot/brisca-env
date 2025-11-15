@@ -16,7 +16,7 @@ services:
       - "traefik.tcp.services.ssh-service.loadbalancer.server.port=22"
 
     volumes:
-      - /c/Users/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
+    - /home/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
     environment:
       BRISCA_BROWSERSERVER: http://browser:9000
       BRISCA_DEBUG: true
@@ -44,21 +44,22 @@ services:
 
     ports:
       - "8080:8080"
-      - "22:22"
+      - "2222:22"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/run/user/1000/docker.sock:/var/run/docker.sock:ro"
 
   browser:
+    hostname: browser
     image: localhost:5000/server-browser:latest
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 2
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "traefik.enable=true"
       - "traefik.http.services.browser.loadbalancer.server.port=9000"
     volumes:
-      - /c/Users/enddy/workspace/brisca/recordings/:/app/recordings/
+      - /home/enddy/workspace/brisca/recordings/:/app/recordings/
     environment:
       BROWSER_PORT: 9000
       BROWSER_HOSTNAME: 0.0.0.0
@@ -80,7 +81,7 @@ services:
     # secrets:
     #   - db-password
     volumes:
-      - db-data:/c/Users/enddy/docker/pgdb
+      - db-data:/home/enddy/pgdb
     environment:
       - POSTGRES_DB=brisca-auth
       - POSTGRES_PASSWORD=postgres
@@ -103,14 +104,14 @@ services:
       - "--stop-timeout"
       - "45m"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/run/user/1000/docker.sock:/var/run/docker.sock:ro"
 
   registry:
     image: registry:3
     ports:
       - "5000:5000"
     volumes:
-      - registry_data:/c/Users/enddy/docker/registry
+      - registry_data:/var/lib/registry
     restart: always
 
 volumes:

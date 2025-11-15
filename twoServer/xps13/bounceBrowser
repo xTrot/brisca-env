@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+
+docker compose pause browser
+docker tag server-browser:latest localhost:5000/server-browser:latest
+docker push localhost:5000/server-browser:latest
+docker compose unpause browser
