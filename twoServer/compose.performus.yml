@@ -7,6 +7,7 @@ services:
 
       # Enable auto-update on new image being sent to the registry.
       - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.lifecycle.post-update=/app/healthyloop"
 
       # Add loadbalancer for the ssh service
       - "traefik.enable=true"
@@ -30,6 +31,11 @@ services:
     deploy:
       mode: replicated
       replicas: 2
+    healthcheck:
+      test: [ "CMD", "/app/healthcheck", "127.0.0.1", "22" ]
+      interval: 5s
+      timeout: 3s
+      retries: 15
 
   browser-proxy:
     image: "traefik"
@@ -114,9 +120,11 @@ services:
       - 5432:5432
 
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:latest
     command:
       - "--label-enable"
+      - "--enable-lifecycle-hooks"
+      - "--debug"
       - "--interval"
       - "1"
       - "--rolling-restart"
