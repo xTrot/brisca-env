@@ -51,7 +51,7 @@ services:
 
     ports:
       - "8080:8080"
-      - "22:22"
+      - "2222:22"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
@@ -124,7 +124,6 @@ services:
     command:
       - "--label-enable"
       - "--enable-lifecycle-hooks"
-      - "--debug"
       - "--interval"
       - "1"
       - "--rolling-restart"
