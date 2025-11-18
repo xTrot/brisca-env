@@ -16,9 +16,10 @@ services:
       - "traefik.tcp.services.ssh-service.loadbalancer.server.port=22"
 
     volumes:
-    - /home/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
+      - /home/enddy/workspace/brisca.sh/.ssh/:/app/.ssh/
     environment:
       BRISCA_BROWSERSERVER: http://browser:9000
+      BRISCA_GAMESERVER: http://games:8000
       BRISCA_DEBUG: true
       BRISCA_HOST: 0.0.0.0
       BRISCA_PORT: 22
@@ -49,7 +50,6 @@ services:
       - "/run/user/1000/docker.sock:/var/run/docker.sock:ro"
 
   browser:
-    hostname: browser
     image: localhost:5000/server-browser:latest
     deploy:
       mode: replicated
@@ -63,13 +63,33 @@ services:
     environment:
       BROWSER_PORT: 9000
       BROWSER_HOSTNAME: 0.0.0.0
-      BROWSER_GAME_SPAWNER: /app/spawner
-      BROWSER_GAME_HEALTHCHECK: /app/healthcheck
-      BROWSER_GAME_PORT_RANGE_START: 9004
-      BROWSER_GAME_PORT_RANGE_COUNT: 40
       RECORDING_DIR: /app/recordings
     healthcheck:
       test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/9000" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
+
+  games:
+    image: localhost:5000/game-server:latest
+    deploy:
+      mode: replicated
+      replicas: 2
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "traefik.enable=true"
+      - "traefik.http.services.games.loadbalancer.server.port=8000"
+      # - "traefik.http.services.games.loadbalancer.sticky.cookie=true"
+      # - "traefik.http.services.games.loadbalancer.sticky.cookie.name=userId"
+      # - "traefik.http.services.games.loadbalancer.sticky.cookie.secure=true"
+      # - "traefik.http.services.games.loadbalancer.sticky.cookie.httpOnly=true"
+    volumes:
+      - /home/enddy/workspace/brisca/recordings/:/app/recordings/
+    environment:
+      GAME_PORT: 8000
+      RECORDING_DIR: /app/recordings
+    healthcheck:
+      test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/8000" ]
       interval: 1s
       timeout: 1s
       retries: 15
