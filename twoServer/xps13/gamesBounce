@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+
+docker compose pause games
+docker tag game-server:latest localhost:5000/game-server:latest
+docker push localhost:5000/game-server:latest
+docker compose unpause games

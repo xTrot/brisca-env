@@ -95,6 +95,7 @@ services:
       - /home/enddy/workspace/brisca/recordings/:/app/recordings/
     environment:
       GAME_PORT: 8000
+      GAME_DEBUG: true
       RECORDING_DIR: /app/recordings
     healthcheck:
       test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/8000" ]
