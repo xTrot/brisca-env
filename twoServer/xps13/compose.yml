@@ -72,6 +72,8 @@ services:
       BROWSER_PORT: 9000
       BROWSER_HOSTNAME: 0.0.0.0
       RECORDING_DIR: /app/recordings
+      OTEL_SERVICE_NAME: "ServerBrowser"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://grafana:4318"
     healthcheck:
       test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/9000" ]
       interval: 1s
@@ -96,6 +98,8 @@ services:
     environment:
       GAME_PORT: 8000
       GAME_DEBUG: true
+      OTEL_SERVICE_NAME: "GameServer"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://grafana:4318"
       RECORDING_DIR: /app/recordings
     healthcheck:
       test: [ "CMD", "printf", "\"GET / HTTP/1.1\n\n\"", ">", "/dev/tcp/127.0.0.1/8000" ]
@@ -124,7 +128,7 @@ services:
       - 5432:5432
 
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:latest
     command:
       - "--label-enable"
       - "--enable-lifecycle-hooks"
@@ -143,6 +147,11 @@ services:
     volumes:
       - registry_data:/var/lib/registry
     restart: always
+
+  grafana:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"
 
 volumes:
   db-data:
