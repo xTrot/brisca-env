@@ -114,7 +114,8 @@ services:
     # secrets:
     #   - db-password
     volumes:
-      - db-data:/home/enddy/pgdb
+      - db-data:/var/log/postgresql/data/
+      - ./init-scripts:/docker-entrypoint-initdb.d
     environment:
       - POSTGRES_DB=brisca-auth
       - POSTGRES_PASSWORD=postgres
