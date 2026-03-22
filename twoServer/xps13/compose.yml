@@ -28,6 +28,8 @@ services:
       BRISCA_DEBUG: true
       BRISCA_HOST: 0.0.0.0
       BRISCA_PORT: 22
+      OTEL_SERVICE_NAME: "ssh"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://grafana:4318"
     depends_on:
       browser:
         condition: service_healthy
